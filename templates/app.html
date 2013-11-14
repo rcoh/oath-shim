@@ -1,3 +1,39 @@
 <html>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="ofs.js"</script>
     <a href="https://www.authshim.com:5000/oauth2/box/auth?client_id={{client_id}}&redirect_uri={{redirect_uri}}">Get a box auth token</a>
+<script>
+    // create client, then do callback
+    var box = ofs.client('http://api.box.com/ofs');
+    box.auth(function(err, fs) {
+        fs.stat('/', function(err, info) {
+            console.log("Root directory info: ", info);
+        });
+        fs.getTemporaryUrl('/loi.pdf', function(err, url) {
+            console.log("URL for loi: ", url);
+        });
+    });
+
+    // First, parse the query string
+    var params = {}, queryString = location.hash.substring(1),
+        regex = /([^&=]+)=([^&]*)/g, m;
+    while (m = regex.exec(queryString)) {
+      params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+    }
+
+    $.ajax({
+        type:"GET",
+        beforeSend: function(request) {
+            request.setRequestHeader("Authorization", "Bearer " + params['access_token']);
+        },
+        dataType: "json",
+        url:"http://127.0.0.1:5002/corsproxy?url=https%3A%2F%2Fapi.box.com%2F2.0%2Ffolders%2F0",
+        success: function(json) {
+            console.log(JSON.stringify(json));
+            $('#result').html(JSON.stringify(json, null, 2).replace(/\n/g, '<br />'));
+
+        }
+    });
+</script>
+<span id="result"></span>
 </html>

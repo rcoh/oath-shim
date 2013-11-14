@@ -92,6 +92,16 @@ def redir():
     # LOL should return everything
     return redirect(state["redirect_uri"] + "#access_token=" + token)
 
+
+@app.route("/corsproxy/<url>", methods=['GET', 'OPTIONS'])
+def proxy(url):
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+    else:
+        response = redirect(url)
+    response.headers['Access-Control-Allow-Origin'] = "*"
+    return response
+
 def doauth_box(client):
     params = {
         "grant_type": "authorization_code", 
