@@ -1,0 +1,21 @@
+.service-button {
+    margin: auto;
+    text-align: center;
+    display: block;
+}
+
+.vspace1em {
+    height: 1em;
+    width: 100%;
+}
+
+.file {
+    height: 180px;
+    text-align: center;
+}
+
+.file .filename {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}

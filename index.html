@@ -1,178 +1,102 @@
-<html>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-    <script>
-var config = {
-    authShimUrl: "https://www.authshim.com/oauth2/",
-    corsporxyUrl: "http://www.authshim.com:5002/corsproxy",
-    boxUrl: "https://api.box.com/2.0"
-}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>OpenFileSystem Demonstration Page</title>
 
-var ofs = (function() {
-    var client = function(url) {
-        return boxClient;
-    }
-    return {
-        client: client,
-        foo: "whatever"
-    };
-})();
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+        <link rel="stylesheet" href="static/style.css">
 
-var getAccessToken = function() {
-    // Borrowed from google
-    // First, parse the query string
-    var params = {}, queryString = location.hash.substring(1),
-        regex = /([^&=]+)=([^&]*)/g, m;
-    while (m = regex.exec(queryString)) {
-      params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
-    }
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+        <script src="static/ofs.js"></script>
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
+        <script>
+            $(function(){
+                var box_client_id = "5fmnuoxq79novlted3hvo7jcc51a5zi6";
+                var box = ofs.client('http://api.box.com/ofs');
+                var msg = $("#auth-message");
 
-    // returns undefined if it's missing
-    return params['access_token'];
-}
+                $("#auth-box").on("click", function(){
+                    box.auth(box_client_id, function(err, fs) {
+                        if (err) {
+                            msg.show().text(err).addClass("alert-error").removeClass("alert-info");
+                            return;
+                        }
 
-var boxClient = (function() {
-    var auth = function(client_id, callback) {
-        var redirectUrl = document.URL;
-        // TODO: better more generalized string formatting
-        var authUrl = config['authShimUrl'] + "box/auth?client_id=" + client_id + "&redirect_uri=" + redirectUrl;
-        var receiveMessage = function(message) {
-            token = message['data'];
-            callback(null, boxFs(token), token);
-        }
-        window.addEventListener("message", receiveMessage, false);
-        var newWindow = window.open(authUrl, "Auth to Box", "height=200,width=200");
-    };
+                        msg.show().text("Successfully authorized Box").addClass("alert-success").removeClass("alert-info").delay(2000).fadeOut();
 
-    return {
-        auth: auth
-    };
-})()
+                        $("#path").text("Loading root folder path...");
+                        fs.stat('/', function(err, info) {
+                            $("#path").text(info.path)
+                        });
+                        $("#loading-progress").show();
 
-var boxFs = function(accessToken) {
-    var stat = function(path, callback) {
-        if (path == "/") {
-            makeBoxRequest("/folders/0", function(err, data) {
-                if (err) {
-                    callback(err);
-                } else {
-                    callback(null, postProcessStat(data));
-                }
-            });
-        } else {
-            // without a cache, need recursively build up
-            // TODO
-            callback(null, "can only do root path");
-        }
-    };
+                        fs.listContents('/', function(err, contents) {
+                            $("#loading-progress-bar").css("width", "100%");
+                            $("#loading-progress").delay(2000).fadeOut();
 
-    var postProcessStat = function(boxFolderObject, basePath) {
-        var type = "application/" + boxFolderObject["type"]
-        var filename = boxFolderObject['name']
-        var path = "";
-        if (boxFolderObject['path_collection']) {
-            boxFolderObject['path_collection']['entries'].forEach(function(item) {
-                path += item['name'] + "/"
+                            var i = 0;
+                            var dir = $("#directory-contents");
+                            contents.forEach(function(item) {
+                                var file = $("<div class='file col-md-2'></div>");
+                                var icon = $("<img/>");
+                                if (item.type == "application/folder") {
+                                    icon.attr("src", "http://findicons.com/icon/download/64167/folder/128/png");
+                                } else {
+                                    icon.attr("src", "http://findicons.com/icon/download/203096/document/128/png");
+                                }
+                                file.append(icon);
+                                file.append("<p class='filename'>" + item.filename + "</p>");
+                                dir.append(file);
+                                console.log(item);
+                            });
+                        });
 
-            });
-        } else {
-            path += basePath + '/';
-        }
-        path += filename;
-        id = boxFolderObject['id'];
-        
-        return {
-          path: path, // required
-          filename: filename, // required
-          type: type, // mimetype
-          id: id
-        }
-    }
-
-    var listContents = function(path, callback) {
-        if (path == "/") {
-            makeBoxRequest("/folders/0", function(err, data) {
-                console.log(data);
-                if (err) {
-                    callback(err);
-                } else {
-                    var folder_stat = postProcessStat(data);
-                    var contents = [];
-                    folder_stat['contents'] = [];
-                    data["item_collection"]["entries"].forEach(function(item) {
-                        contents.push(postProcessStat(item, folder_stat['path']));
+                        /*
+                        fs.getTemporaryUrl('/loi.pdf', function(err, url) {
+                            var urlObject = {
+                                url: "www.api.box.com/asdfadf_abvab",
+                                expires: 1112413513 // unix time when it it will expire
+                            }
+                            console.log("URL for loi: ", url);
+                        });
+                        */
                     });
-                    callback(null, contents);
-                }
+                });
             });
-        }
-    };
-
-    var idToPath = function(id, callback) {
-        // TODO
-    }
-
-    var getTemporaryUrl = function(path, callback) {
-        callback(null, accessToken);
-    };
-
-
-    var makeBoxRequest = function(urlEnd, callback) {
-        // TODO: proper url join
-        url = encodeURIComponent(config['boxUrl'] + urlEnd);
-
-        $.ajax({
-            type:"GET",
-            beforeSend: function(request) {
-                request.setRequestHeader("Authorization", "Bearer " + accessToken);
-            },
-            dataType: "json",
-            url: config['corsporxyUrl'] + "?url=" + url,
-            success: function(json) { callback(null, json) },
-            error: function(error) { callback(error) }
-        });
-    }
-
-    return {
-        stat: stat,
-        listContents: listContents,
-        getTemporaryUrl: getTemporaryUrl 
-    };
-}
-</script>
-<script>
-    // create client, then do callback
-
-    var listBoxRoot = function() {
-    var client_id = "5fmnuoxq79novlted3hvo7jcc51a5zi6";
-    var box = ofs.client('http://api.box.com/ofs');
-    box.auth(client_id, function(err, fs) {
-        fs.stat('/', function(err, info) {
-            $('#result').text("Root directory info: " + JSON.stringify(info));
-        });
-
-        fs.listContents('/', function(err, contents) {
-            //$('#result2').text("Root folder contents: " + JSON.stringify(contents));
-            contents.forEach(function(item) {
-                $('#result2').append(
-                  $('<li>').append(item['filename'])
-                );
-            });
-        });
-
-        fs.getTemporaryUrl('/loi.pdf', function(err, url) {
-            var urlObject = {
-                url: "www.api.box.com/asdfadf_abvab",
-                expires: 1112413513 // unix time when it it will expire
-            }
-            console.log("URL for loi: ", url);
-        });
-    });
-    }
-</script>
-<button onclick="listBoxRoot()">List Box Root</button>
-<span id="result"></span>
-<br />
-<ul><li>Box Root Directory:</li>
-<ul id="result2"></ul>
-</ul>
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <h1>OpenFileSystem Demonstration Page</h1>
+            <p>This page serves as an example of how you can use the OpenFileSystem api to interact with cloud file sources using entirely client-side javascript. To try it out, authorize one of the providers below:</p>
+            <div class="vspace1em">&nbsp;</div>
+            <div class="row">
+                <div class="col-md-4">
+                    <button id="auth-box" type="button" class="service-button btn btn-primary btn-lg">
+                        Box
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button type="button" class="service-button btn btn-primary btn-lg" disabled>
+                        Google Drive
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button type="button" class="service-button btn btn-primary btn-lg" disabled>
+                        Dropbox
+                    </button>
+                </div>
+            </div>
+            <hr/>
+            <p class="alert alert-info" id="auth-message">Not yet authorized for any client</p>
+            <h2 id="path"></h2>
+            <div id="directory-contents">
+                <div id="loading-progress" style="display:none" class="progress progress-striped active">
+                  <div id="loading-progress-bar" class="progress-bar" style="width: 5%"></div>
+                </div>
+            </div>
+        </div>
+    </body>
 </html>
