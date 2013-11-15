@@ -99,17 +99,26 @@ var boxFs = function(accessToken) {
         // TODO
     }
 
-    var getTemporaryUrl = function(path, callback) {
-        callback(null, accessToken);
+    // WARNING NOT API FIX
+    var getTemporaryUrl = function(id, callback) {
+        makeBoxRequest("/files/" + id, function(err, json) {
+            url = json['shared_link']['url'];
+            callback(err, {url: url, expires: -1});
+        }, "PUT", {"shared_link": {"access": "open"}}); 
     };
 
 
-    var makeBoxRequest = function(urlEnd, callback) {
+    var makeBoxRequest = function(urlEnd, callback, type, data) {
         // TODO: proper url join
         url = encodeURIComponent(config['boxUrl'] + urlEnd);
 
+        if (!type) {
+            type = "GET";
+        }
+
         $.ajax({
-            type:"GET",
+            type:type,
+            data: data,
             beforeSend: function(request) {
                 request.setRequestHeader("Authorization", "Bearer " + accessToken);
             },

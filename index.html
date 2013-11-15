@@ -47,6 +47,11 @@
                                     icon.attr("src", "http://findicons.com/icon/download/203096/document/128/png");
                                 }
                                 file.append(icon);
+                                file.click(function(e) {
+                                    fs.getTemporaryUrl(item.id, function(err, json) {
+                                        window.open(json['url']);
+                                    });
+                                });
                                 file.append("<p class='filename'>" + item.filename + "</p>");
                                 dir.append(file);
                                 console.log(item);
