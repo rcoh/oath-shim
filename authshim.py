@@ -16,7 +16,8 @@ CLIENTS = {
     CLIENT_ID: {
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
-        "allowed_redirects": ["http://www.testapp.com:5001/"],
+        "allowed_redirects": ["http://www.testapp.com:5001/",
+            "file:///home/rcoh/fp/pages-shim/index.html", "http://rcoh.github.io/oauth-shim/"],
         "service": "box"
     }
 }
@@ -46,7 +47,7 @@ def do_auth(servicename):
     # verify redirect
     # TODO more flexibility
     if not final_redirect_uri in client_info['allowed_redirects']:
-        return "bad redirect", 500
+        return "bad redirect: " + final_redirect_uri, 500
 
     service_obj = SERVICES[client_info['service']]
     redirect_uri = service_obj["url"]
@@ -90,7 +91,8 @@ def redir():
     if client["service"] == "box":
         token = doauth_box(state['client'])
     # LOL should return everything
-    return redirect(state["redirect_uri"] + "#access_token=" + token)
+    return render_template("auth_complete.html", auth_token = token, redirect_origin =
+            state['redirect_uri']) 
 
 
 @app.route("/corsproxy/<url>", methods=['GET', 'OPTIONS'])
@@ -111,6 +113,7 @@ def doauth_box(client):
     }
     resp = requests.post("https://www.box.com/api/oauth2/token", data = params)
     json_res = resp.json()
+    print json_res
     access_token = json_res['access_token']
     return access_token
 

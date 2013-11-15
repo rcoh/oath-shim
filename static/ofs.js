@@ -37,7 +37,7 @@ var boxClient = (function() {
             callback(null, boxFs(token), token);
         }
         window.addEventListener("message", receiveMessage, false);
-        var newWindow = window.open(authUrl);
+        var newWindow = window.open(authUrl, "Auth to Box", "height=200,width=200");
     };
 
     return {
@@ -62,14 +62,18 @@ var boxFs = function(accessToken) {
         }
     };
 
-    var postProcessStat = function(boxFolderObject) {
+    var postProcessStat = function(boxFolderObject, basePath) {
         var type = "application/" + boxFolderObject["type"]
         var filename = boxFolderObject['name']
         var path = "";
-        boxFolderObject['path_collection']['entries'].forEach(function(item) {
-            path += item['name'] + "/"
+        if (boxFolderObject['path_collection']) {
+            boxFolderObject['path_collection']['entries'].forEach(function(item) {
+                path += item['name'] + "/"
 
-        });
+            });
+        } else {
+            path += basePath + '/';
+        }
         path += filename;
         id = boxFolderObject['id'];
         
@@ -82,7 +86,22 @@ var boxFs = function(accessToken) {
     }
 
     var listContents = function(path, callback) {
-        callback(null, accessToken);
+        if (path == "/") {
+            makeBoxRequest("/folders/0", function(err, data) {
+                console.log(data);
+                if (err) {
+                    callback(err);
+                } else {
+                    var folder_stat = postProcessStat(data);
+                    var contents = [];
+                    folder_stat['contents'] = [];
+                    data["item_collection"]["entries"].forEach(function(item) {
+                        contents.push(postProcessStat(item, folder_stat['path']));
+                    });
+                    callback(null, contents);
+                }
+            });
+        }
     };
 
     var idToPath = function(id, callback) {
