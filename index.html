@@ -1,0 +1,33 @@
+<html>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="/static/ofs.js"></script>
+<script>
+    // create client, then do callback
+
+    var listBoxRoot = function() {
+    var client_id = "5fmnuoxq79novlted3hvo7jcc51a5zi6";
+    var box = ofs.client('http://api.box.com/ofs');
+    box.auth(client_id, function(err, fs) {
+        fs.stat('/', function(err, info) {
+            $('#result').text("Root directory info: " + JSON.stringify(info));
+        });
+
+        fs.listContents('/', function(err, contents) {
+            $('#result2').text("Root folder contents: " + JSON.stringify(contents));
+        });
+
+        fs.getTemporaryUrl('/loi.pdf', function(err, url) {
+            var urlObject = {
+                url: "www.api.box.com/asdfadf_abvab",
+                expires: 1112413513 // unix time when it it will expire
+            }
+            console.log("URL for loi: ", url);
+        });
+    });
+    }
+</script>
+<button onclick="listBoxRoot()">List Box Root</button>
+<span id="result"></span>
+<br />
+<span id="result2"></span>
+</html>
